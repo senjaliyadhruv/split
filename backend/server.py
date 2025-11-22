@@ -26,6 +26,22 @@ ACCESS_TOKEN_EXPIRE_DAYS = 30
 security = HTTPBearer()
 
 app = FastAPI()
+
+# ============= CRITICAL FIX: ADD CORS MIDDLEWARE FIRST =============
+# CORS middleware MUST be added BEFORE any other middleware or routers
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "http://54.175.209.172:3000",  # Frontend URL
+        "http://54.175.209.172:8000",  # Backend URL
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 api_router = APIRouter(prefix="/api")
 
 logging.basicConfig(level=logging.INFO)
@@ -146,40 +162,52 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 
 @api_router.post("/auth/register")
 async def register(user_data: UserCreate):
-    async with get_async_connection() as cursor:
-        # Check if email exists
-        await cursor.execute("SELECT id FROM users WHERE email = %s", (user_data.email,))
-        existing = await cursor.fetchone()
-        
-        if existing:
-            raise HTTPException(status_code=400, detail="Email already registered")
-        
-        user = User(name=user_data.name, email=user_data.email)
-        password_hash = hash_password(user_data.password)
-        
-        # Insert user
-        await cursor.execute(
-            "INSERT INTO users (id, name, email, password_hash, created_at) VALUES (%s, %s, %s, %s, %s)",
-            (user.id, user.name, user.email, password_hash, user.created_at)
-        )
-        
-        token = create_token(user.id)
-        return {"token": token, "user": {"id": user.id, "name": user.name, "email": user.email}}
+    try:
+        async with get_async_connection() as cursor:
+            # Check if email exists
+            await cursor.execute("SELECT id FROM users WHERE email = %s", (user_data.email,))
+            existing = await cursor.fetchone()
+            
+            if existing:
+                raise HTTPException(status_code=400, detail="Email already registered")
+            
+            user = User(name=user_data.name, email=user_data.email)
+            password_hash = hash_password(user_data.password)
+            
+            # Insert user
+            await cursor.execute(
+                "INSERT INTO users (id, name, email, password_hash, created_at) VALUES (%s, %s, %s, %s, %s)",
+                (user.id, user.name, user.email, password_hash, user.created_at)
+            )
+            
+            token = create_token(user.id)
+            return {"token": token, "user": {"id": user.id, "name": user.name, "email": user.email}}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Registration error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Registration failed: {str(e)}")
 
 @api_router.post("/auth/login")
 async def login(credentials: UserLogin):
-    async with get_async_connection() as cursor:
-        await cursor.execute(
-            "SELECT id, name, email, password_hash FROM users WHERE email = %s",
-            (credentials.email,)
-        )
-        user = await cursor.fetchone()
-        
-        if not user or not verify_password(credentials.password, user['password_hash']):
-            raise HTTPException(status_code=401, detail="Invalid credentials")
-        
-        token = create_token(user['id'])
-        return {"token": token, "user": {"id": user['id'], "name": user['name'], "email": user['email']}}
+    try:
+        async with get_async_connection() as cursor:
+            await cursor.execute(
+                "SELECT id, name, email, password_hash FROM users WHERE email = %s",
+                (credentials.email,)
+            )
+            user = await cursor.fetchone()
+            
+            if not user or not verify_password(credentials.password, user['password_hash']):
+                raise HTTPException(status_code=401, detail="Invalid credentials")
+            
+            token = create_token(user['id'])
+            return {"token": token, "user": {"id": user['id'], "name": user['name'], "email": user['email']}}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Login error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Login failed")
 
 @api_router.get("/auth/me")
 async def get_me(user_id: str = Depends(get_current_user)):
@@ -212,7 +240,7 @@ async def create_group(group_data: GroupCreate, user_id: str = Depends(get_curre
         
         # Insert group
         await cursor.execute(
-            "INSERT INTO groups (id, name, description, currency, created_by, created_at) VALUES (%s, %s, %s, %s, %s, %s)",
+            "INSERT INTO `groups` (id, name, description, currency, created_by, created_at) VALUES (%s, %s, %s, %s, %s, %s)",
             (group_id, group_data.name, group_data.description, group_data.currency, user_id, created_at)
         )
         
@@ -250,7 +278,7 @@ async def get_groups(user_id: str = Depends(get_current_user)):
         await cursor.execute(
             """
             SELECT DISTINCT g.* 
-            FROM groups g
+            FROM `groups` g
             INNER JOIN group_members gm ON g.id = gm.group_id
             WHERE gm.user_id = %s
             ORDER BY g.created_at DESC
@@ -284,7 +312,7 @@ async def get_groups(user_id: str = Depends(get_current_user)):
 async def get_group(group_id: str, user_id: str = Depends(get_current_user)):
     async with get_async_connection() as cursor:
         # Get group
-        await cursor.execute("SELECT * FROM groups WHERE id = %s", (group_id,))
+        await cursor.execute("SELECT * FROM `groups` WHERE id = %s", (group_id,))
         group_data = await cursor.fetchone()
         
         if not group_data:
@@ -322,7 +350,7 @@ async def delete_group(group_id: str, user_id: str = Depends(get_current_user)):
     async with get_async_connection() as cursor:
         # Check if group exists and user is creator
         await cursor.execute(
-            "SELECT created_by FROM groups WHERE id = %s",
+            "SELECT created_by FROM `groups` WHERE id = %s",
             (group_id,)
         )
         group = await cursor.fetchone()
@@ -334,7 +362,7 @@ async def delete_group(group_id: str, user_id: str = Depends(get_current_user)):
             raise HTTPException(status_code=403, detail="Only creator can delete group")
         
         # Delete group (cascade will handle related records)
-        await cursor.execute("DELETE FROM groups WHERE id = %s", (group_id,))
+        await cursor.execute("DELETE FROM `groups` WHERE id = %s", (group_id,))
         
         return {"message": "Group deleted successfully"}
 
@@ -471,7 +499,7 @@ async def get_balances(group_id: str, user_id: str = Depends(get_current_user)):
             raise HTTPException(status_code=403, detail="Not a group member")
         
         # Get group currency
-        await cursor.execute("SELECT currency FROM groups WHERE id = %s", (group_id,))
+        await cursor.execute("SELECT currency FROM `groups` WHERE id = %s", (group_id,))
         group_data = await cursor.fetchone()
         
         # Get all expenses with splits
@@ -636,17 +664,8 @@ async def get_settlements(group_id: str, user_id: str = Depends(get_current_user
             for s in settlements_data
         ]
 
-# Include router
+# ============= Include router AFTER CORS middleware =============
 app.include_router(api_router)
-
-# CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # Startup and shutdown events
 @app.on_event("startup")
