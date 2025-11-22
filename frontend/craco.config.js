@@ -14,7 +14,9 @@ let babelMetadataPlugin;
 let setupDevServer;
 
 if (config.enableVisualEdits) {
-    babelMetadataPlugin = require("./plugins/visual-edits/babel-metadata-plugin");
+    // IMPORTANT: Make sure this internal plugin still works with the newer Babel dependencies.
+    // If you run into build issues, this is the first place to check.
+    babelMetadataPlugin = require("./plugins/visual-edits/babel-metadata-plugin"); 
     setupDevServer = require("./plugins/visual-edits/dev-server-setup");
 }
 
@@ -35,7 +37,6 @@ const webpackConfig = {
             '@': path.resolve(__dirname, 'src'),
         },
         configure: (webpackConfig) => {
-
             // Disable hot reload completely if environment variable is set
             if (config.disableHotReload) {
                 // Remove hot reload related plugins
