@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: splitwise-backend
+  labels:
+    app: splitwise
+    tier: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: splitwise
+      tier: backend
+  template:
+    metadata:
+      labels:
+        app: splitwise
+        tier: backend
+    spec:
+      containers:
+        - name: backend
+          # Replace this with your real backend image (built and pushed to a registry)
+          image: dhruv1204/backend-splitwise:1
+          # Change containerPort if your backend listens somewhere else
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            # example env - adjust or add DB connection strings / secrets via Kubernetes Secret
+            - name: FLASK_ENV
+              value: "production"
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: splitwise-backend
+  labels:
+    app: splitwise
+    tier: backend
+spec:
+  type: NodePort
+  selector:
+    app: splitwise
+    tier: backend
+  ports:
+    - port: 8000
+      targetPort: 8000
+      protocol: TCP
+      name: http
