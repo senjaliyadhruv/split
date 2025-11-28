@@ -20,7 +20,7 @@ spec:
       containers:
         - name: backend
           # Replace this with your real backend image (built and pushed to a registry)
-          image: dhruv1204/backend:1
+          image: dhruv1204/backend:2
           # Change containerPort if your backend listens somewhere else
           ports:
             - containerPort: 8000
