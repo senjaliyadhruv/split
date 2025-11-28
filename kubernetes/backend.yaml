@@ -29,23 +29,3 @@ spec:
             # example env - adjust or add DB connection strings / secrets via Kubernetes Secret
             - name: FLASK_ENV
               value: "production"
-
----
-
-apiVersion: v1
-kind: Service
-metadata:
-  name: splitwise-backend
-  labels:
-    app: splitwise
-    tier: backend
-spec:
-  type: NodePort
-  selector:
-    app: splitwise
-    tier: backend
-  ports:
-    - port: 8000
-      targetPort: 8000
-      protocol: TCP
-      name: http
