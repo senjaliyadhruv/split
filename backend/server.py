@@ -34,8 +34,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://localhost:8000",
-        "http://13.218.113.14:3000",  # Frontend URL
-        "http://13.218.113.14:8000",  # Backend URL
+        "http://54.163.192.196:3000",  # Frontend URL
+        "http://54.163.192.196:8000",  # Backend URL
     ],
     allow_credentials=True,
     allow_methods=["*"],
