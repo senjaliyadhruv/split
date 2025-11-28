@@ -29,24 +29,3 @@ spec:
             # In-cluster DNS for backend service (service name below)
             - name: REACT_APP_API_URL
               value: "http://splitwise-backend:8000"
-
-
----
-
-apiVersion: v1
-kind: Service
-metadata:
-  name: splitwise-frontend
-  labels:
-    app: splitwise
-    tier: frontend
-spec:
-  type: NodePort
-  selector:
-    app: splitwise
-    tier: frontend
-  ports:
-    - port: 80       # cluster port (clients will use this)
-      targetPort: 3000
-      protocol: TCP
-      name: http
