@@ -20,7 +20,7 @@ spec:
       containers:
         - name: frontend
           # Replace this with your real frontend image (built and pushed to a registry)
-          image: dhruv1204/frontend:2
+          image: dhruv1204/frontend:1
           # Change containerPort if your frontend serves on a different port (80 for nginx build)
           ports:
             - containerPort: 3000
