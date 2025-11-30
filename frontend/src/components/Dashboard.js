@@ -100,7 +100,7 @@ const Dashboard = ({ user, onLogout }) => {
                 <div className="container mx-auto px-4 py-4">
                     <div className="flex justify-between items-center">
                         <div>
-                            <h1 className="text-2xl font-bold text-gray-900">SplitWise</h1>
+                            <h1 className="text-2xl font-bold text-gray-900">SplitWise by Dhruv</h1>
                             <p className="text-sm text-gray-600">Welcome back, {user.name}!</p>
                         </div>
                         <Button
